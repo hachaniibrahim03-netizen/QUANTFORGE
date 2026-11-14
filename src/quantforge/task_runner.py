@@ -9,7 +9,12 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from quantforge.providers import GeminiProvider, MockProvider, ProviderError
+from quantforge.providers import (
+    FreeLLMAPIProvider,
+    GeminiProvider,
+    MockProvider,
+    ProviderError,
+)
 
 MAX_PROMPT_CHARS = 8_000
 
@@ -26,6 +31,9 @@ def run_smoke(prompt: str, provider_name: str = "mock") -> dict:
     elif provider_name == "gemini":
         provider = GeminiProvider()
         execution_mode = "external_api_call"
+    elif provider_name == "freellmapi":
+        provider = FreeLLMAPIProvider()
+        execution_mode = "local_gateway_external_model_call"
     else:
         raise ValueError(f"unsupported provider: {provider_name}")
 
@@ -53,7 +61,7 @@ def run_smoke(prompt: str, provider_name: str = "mock") -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run QUANTFORGE provider contract smoke test")
     parser.add_argument("--prompt", default="QUANTFORGE provider contract check")
-    parser.add_argument("--provider", choices=("mock", "gemini"), default="mock")
+    parser.add_argument("--provider", choices=("mock", "gemini", "freellmapi"), default="mock")
     parser.add_argument("--output", default="artifacts/provider-smoke.json")
     args = parser.parse_args(argv)
     try:
