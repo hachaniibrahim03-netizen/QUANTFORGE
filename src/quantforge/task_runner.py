@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         result = run_smoke(args.prompt)
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(result, indent=2) + "\\n", encoding="utf-8")
+        output_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({k: v for k, v in result.items() if k != "output_text"}, indent=2))
         print(f"ARTIFACT={output_path.as_posix()}")
         return 0
