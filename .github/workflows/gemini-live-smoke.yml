@@ -1,0 +1,43 @@
+name: QUANTFORGE Gemini Live Smoke Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gemini-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+      PYTHONPATH: src
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify secret is configured
+        shell: bash
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::Add GEMINI_API_KEY under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+      - name: Run one bounded Gemini request
+        run: |
+          python -m quantforge.task_runner \
+            --provider gemini \
+            --prompt "Reply with exactly: QUANTFORGE_GEMINI_SMOKE_OK" \
+            --output artifacts/gemini-smoke.json
+      - name: Upload private smoke evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-live-smoke-evidence
+          path: artifacts/gemini-smoke.json
+          if-no-files-found: error
+          retention-days: 7
