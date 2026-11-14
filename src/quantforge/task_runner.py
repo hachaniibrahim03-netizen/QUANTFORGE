@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,7 +29,9 @@ def run_smoke(prompt: str, provider_name: str = "mock") -> dict:
     else:
         raise ValueError(f"unsupported provider: {provider_name}")
 
+    started = time.perf_counter()
     response = provider.generate(prompt)
+    latency_ms = round((time.perf_counter() - started) * 1000, 3)
     payload = {
         "schema_version": "1.0",
         "status": "PASS",
@@ -37,6 +40,7 @@ def run_smoke(prompt: str, provider_name: str = "mock") -> dict:
         "provider": response.provider,
         "model": response.model,
         "request_id": response.request_id,
+        "latency_ms": latency_ms,
         "input_tokens": response.input_tokens,
         "output_tokens": response.output_tokens,
         "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
