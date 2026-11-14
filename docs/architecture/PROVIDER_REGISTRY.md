@@ -1,0 +1,115 @@
+# QUANTFORGE Provider Registry
+
+**Status:** Initial research baseline — NOT APPROVED for production use  
+**Version:** 0.1.0  
+**Verified on:** 2026-11-14  
+**Owner:** QUANTFORGE  
+**Purpose:** Track model providers, gateways, capabilities, quotas, terms, and evidence before any provider is enabled.
+
+> This file is an evidence register, not a claim that API credentials exist or that any provider has passed a live smoke test. Values marked `UNKNOWN` or `TO_VERIFY` must not be guessed. Provider quotas are account-, project-, model-, region-, and time-dependent.
+
+## 1. Decision summary
+
+1. Evaluate **FreeLLMAPI** as an optional self-hosted aggregation/router candidate, not as QUANTFORGE's trusted control plane.
+2. Do not treat the advertised **7.4 billion tokens/month** as guaranteed capacity. It is the project's estimate of the sum of free-tier allowances across multiple providers/endpoints. Each allowance remains subject to the relevant provider's account eligibility, model availability, rate limits, acceptable-use terms, and quota changes.
+3. Keep direct provider adapters possible. A gateway must never hide the identity of the upstream provider/model or obscure usage, errors, and quota exhaustion.
+4. No API key is stored in this repository. Use environment variables or a secret manager; record only secret references.
+5. No provider is marked LIVE until QUANTFORGE has completed a credentialed smoke test and captured request/response metadata, actual usage, latency, error behavior, and a reproducible evidence artifact.
+
+## 2. Provider / gateway register
+
+| ID | Provider / gateway | Role | Public API / integration | Free access evidence | Quotas | Key status | QUANTFORGE status |
+|---|---|---|---|---|---|---|---|
+| GW-001 | FreeLLMAPI (upstream: tashfeenahmed/freellmapi) | Optional self-hosted aggregator and OpenAI-compatible gateway | Local gateway; documented default API base: `http://localhost:3001/v1` | Upstream README advertises 34 providers, 635 endpoints and roughly 7.4B tokens/month; these are upstream catalog estimates, not a personal entitlement | Per-provider/model limits; exact account-level values must be checked at each provider. Free catalog snapshot is reportedly delayed 30 days versus live feed | NOT CONFIGURED | EVALUATE — NOT APPROVED |
+| PR-001 | Google Gemini Developer API | Direct model provider | Official API documentation; exact base URL/model IDs to be recorded during adapter implementation | Official documentation confirms a Free usage tier with access to selected models and free input/output tokens | Model- and project-specific RPM, input TPM and RPD; active values are shown in AI Studio. Do not copy generic quota numbers into a live account record | NOT CONFIGURED | CANDIDATE — VERIFY ACCOUNT |
+| PR-002 | Groq API | Direct model provider | Official API documentation; exact base URL/model IDs to be recorded during adapter implementation | Official documentation describes rate-limit tiers and per-model limits; free-tier availability/eligibility must be confirmed in the account | RPM, RPD, TPM, TPD and other limits vary by model and organization. Exact limits are shown in the account console; 429 and rate-limit headers must be captured | NOT CONFIGURED | CANDIDATE — VERIFY ACCOUNT |
+| PR-003 | Cerebras Inference | Direct model provider | Official API documentation; exact base URL/model IDs to be recorded during adapter implementation | Public pricing page describes a $0 Free tier with lower rate limits; current trial/credit eligibility and whether it is recurring must be verified before relying on it | Model- and tier-specific; current exact limits and any credit expiry/payment-method requirement must be checked in the account | NOT CONFIGURED | CANDIDATE — VERIFY ACCOUNT |
+
+## 3. Evidence and caveats
+
+### GW-001 — FreeLLMAPI
+
+**Primary source:** https://github.com/tashfeenahmed/freellmapi
+
+The upstream README describes:
+- An OpenAI-compatible local gateway and a unified API surface.
+- Provider-key management, routing, fallback, per-key rate tracking, and a dashboard.
+- Encrypted provider keys stored in a local SQLite database (as described by the project).
+- A model catalog that is synchronized from a signed feed.
+- A free catalog snapshot that may lag the live catalog by 30 days.
+- A stated total of roughly 7.4B tokens/month across 34 providers and 635 endpoints.
+- A disclaimer that the project is for personal experimentation and learning, not production, and that free tiers are not a stable supported inference substrate.
+
+**Assessment:** Useful as a convenience layer for experimentation, but it introduces another software and credential-handling trust boundary. QUANTFORGE must review the exact source revision, dependencies, install/update scripts, secret-storage implementation, network behavior, telemetry, license, and provider terms before deployment. Do not run an unreviewed install script with elevated privileges. Do not expose its dashboard or API to the public internet without a separate security review.
+
+**Important distinction:** A gateway can aggregate access, but it cannot create extra entitlements. The advertised aggregate is not a guaranteed token balance for one user, one model, one month, or one QUANTFORGE workload.
+
+### PR-001 — Google Gemini Developer API
+
+**Primary sources:**
+- https://ai.google.dev/gemini-api/docs/rate-limits
+- https://ai.google.dev/gemini-api/docs/pricing
+
+Official documentation says limits are evaluated across requests per minute (RPM), input tokens per minute (TPM), and requests per day (RPD), with values varying by model and project. The active limits should be read from Google AI Studio. The Free tier provides access to selected models and free input/output tokens; data-use terms differ from paid service. Confirm the applicable data handling terms before sending proprietary QUANTFORGE source code or private research.
+
+### PR-002 — Groq API
+
+**Primary source:** https://console.groq.com/docs/rate-limits
+
+Official documentation defines RPM, RPD, TPM, TPD and audio limits, notes that limits apply at organization level, and says exact current limits are visible in the account console. The docs describe 429 responses and rate-limit headers. Do not assume a published table is the actual entitlement for this account.
+
+### PR-003 — Cerebras Inference
+
+**Primary sources:**
+- https://inference-docs.cerebras.ai/support/pricing
+- https://www.cerebras.ai/pricing
+
+Public pricing material describes a $0 Free tier with lower rate limits and a separate pay-as-you-go Developer tier. The precise current free/trial conditions, credit expiry, payment-method requirements, and model quotas must be checked against current official account documentation before classifying it as a recurring free resource.
+
+## 4. Required fields for every future provider entry
+
+Every provider record must include:
+
+- `provider_id`, `provider_name`, `provider_type` (direct | gateway | local)
+- `api_base_url`, `protocol`, `supported_endpoints`
+- `model_ids` (exact upstream IDs; no guessed aliases)
+- `capabilities` (reasoning, coding, tool_calling, structured_output, long_context, vision, audio, embeddings)
+- `auth_method`, `secret_reference` (never the secret itself)
+- `free_tier_type` (permanent | trial | promotional | unknown)
+- `free_tier_eligibility`, `payment_method_required`, `region_restrictions`
+- `rpm`, `rpd`, `tpm`, `tpd`, `monthly_token_cap`, `credit_amount`, `credit_expiry`
+- `quota_scope` (account | organization | project | key | model | IP)
+- `usage_reporting`, `rate_limit_headers`, `reset_timezone`
+- `data_retention`, `training_use`, `privacy_terms_url`, `acceptable_use_url`
+- `license` (for gateways/software), `source_urls`, `verified_at`, `verified_by`
+- `evidence_grade`, `status`, `notes`
+
+## 5. Evidence grades and activation gates
+
+| Grade | Meaning | Allowed use |
+|---|---|---|
+| A | Current official provider documentation or account console, confirmed by a live test | May be considered for controlled experiments |
+| B | Current official documentation, but no account-level confirmation or live test | Candidate only |
+| C | Maintainer README, community catalog, or secondary source | Discovery only |
+| D | Unattributed claim, video, copied table, or unsupported estimate | Do not rely on it |
+
+A provider can be enabled for a QUANTFORGE experiment only after:
+1. Terms, region, privacy, and data-use policy are reviewed.
+2. The user configures the credential in a local secret store or approved secret manager.
+3. A smoke test confirms authentication and the exact model ID.
+4. The runner records provider, model, timestamps, latency, request ID, token usage, response status, rate-limit headers, and artifact hash where available.
+5. A second request verifies expected error handling and that a 429 does not cause an unbounded retry loop.
+6. The provider can be disabled without changing experiment definitions or losing audit records.
+
+## 6. Next implementation sequence
+
+- [ ] Inspect FreeLLMAPI source, release, license, dependency tree, install/update scripts, and credential storage before running it.
+- [ ] Confirm the user's eligible provider accounts and their actual quotas in provider dashboards; never request API keys in chat.
+- [ ] Select one direct provider for the first controlled smoke test; keep the gateway optional until its security review is complete.
+- [ ] Implement a minimal adapter interface and a non-sensitive test prompt.
+- [ ] Store a machine-readable provider registry alongside this document only after the fields and validation rules are agreed.
+- [ ] Add a usage ledger and bounded retry policy before multi-agent fan-out.
+
+## 7. Current state
+
+**No provider credentials are configured by this document. No API call has been made through a provider. No smoke test has passed. FreeLLMAPI is not installed or running.** This is a research and governance baseline only.
