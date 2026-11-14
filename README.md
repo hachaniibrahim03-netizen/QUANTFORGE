@@ -4,7 +4,7 @@ An auditable, cost-aware multi-agent quantitative research and engineering labor
 
 ## Current status
 
-This repository is in its foundation phase. Architecture documents and a mock-only provider execution slice exist. **No external model provider is connected, no API credentials are stored here, and no live trading or market-data execution is enabled.**
+The foundation now includes offline mock testing, a Gemini adapter scaffold, and a loopback-only FreeLLMAPI adapter. **No live QUANTFORGE-to-FreeLLMAPI request has yet been verified.** No API credentials are stored in this repository. No live trading or market-data execution is enabled.
 
 ## Start here
 
@@ -12,36 +12,49 @@ This repository is in its foundation phase. Architecture documents and a mock-on
 - [Provider registry and evidence register](docs/architecture/PROVIDER_REGISTRY.md)
 - [First vertical slice](docs/architecture/FIRST_VERTICAL_SLICE.md)
 
-## Run the current mock-only quality checks
+## Run offline quality checks
 
 Requires Python 3.10+:
 
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -v
-PYTHONPATH=src python -m quantforge.task_runner --output artifacts/provider-smoke.json
+PYTHONPATH=src python -m quantforge.task_runner --provider mock --output artifacts/provider-smoke.json
 ```
 
-The mock provider is deterministic and makes **no network request**. Its PASS result proves only that the local provider contract and evidence-writing path execute; it does not prove that an external API works.
+The mock provider is deterministic and makes no network request. Its PASS result proves only that the local provider contract and evidence-writing path execute.
 
-GitHub Actions runs the same checks through `.github/workflows/quality-gate.yml` and uploads a smoke evidence artifact.
+## Optional: test the local FreeLLMAPI gateway
 
-## Security
+Keep FreeLLMAPI running on the same Windows computer as the QUANTFORGE runner. The adapter accepts only loopback HTTP addresses; it deliberately rejects LAN/public bind addresses.
 
-- Never commit API keys, tokens, passwords, or personal credentials.
-- Use a local environment or an approved secret manager for credentials.
-- Do not expose a local model gateway or dashboard publicly without a security review.
-- External model calls must record provider/model identity, usage, request IDs, errors, and bounded retry behavior.
-- No live broker connection or live trading is part of this foundation slice.
+PowerShell example (use the actual port shown by FreeLLMAPI if it differs):
 
+```powershell
+$env:FREELLMAPI_BASE_URL = "http://127.0.0.1:31415/v1"
+$env:FREELLMAPI_API_KEY = "YOUR_NEW_LOCAL_GATEWAY_KEY"
+$env:FREELLMAPI_MODEL = "EXACT_MODEL_ID_FROM_FREELLMAPI"
+$env:PYTHONPATH = "src"
+python -m quantforge.task_runner --provider freellmapi --prompt "Reply with exactly: QUANTFORGE_GATEWAY_OK" --output artifacts/freellmapi-smoke.json
+```
+
+Use a newly rotated gateway key stored only in your local shell or a local secret manager. Do not paste it into ChatGPT, commit it, or put it in a repository file. Do not assume a model's display label is its API model ID: copy the exact ID shown by the gateway's model/API catalogue. If the gateway port differs, change only the port in the base URL.
+
+The output artifact records the selected provider/model, request ID when available, latency, token usage when returned, prompt hash, and response. It does not record the API key. A successful result verifies one request through the selected route only; it does not prove every listed model is usable or that monthly quotas are guaranteed.
 
 ## Optional: one real Gemini smoke request
 
-The live test is manual and sends exactly one short prompt. It is not part of the automatic quality workflow.
+The Gemini adapter is separate from FreeLLMAPI. It reads `GEMINI_API_KEY` and optional `GEMINI_MODEL` from the local environment. Run only if you intentionally want a direct Google API route:
 
-1. Create a Gemini API key in Google AI Studio.
-2. In this GitHub repository, open **Settings → Secrets and variables → Actions → New repository secret**.
-3. Name the secret `GEMINI_API_KEY` and paste the key into GitHub's secret field. Do not paste it into a chat, issue, commit, or source file.
-4. Open **Actions → QUANTFORGE Gemini Live Smoke Test → Run workflow**.
-5. If the run succeeds, download the `gemini-live-smoke-evidence` artifact. It records the provider/model, request ID when supplied, latency, token usage when returned, and output.
+```bash
+PYTHONPATH=src python -m quantforge.task_runner --provider gemini --output artifacts/gemini-smoke.json
+```
 
-The workflow is manually triggered, has a 3-minute job timeout, sends one request, and retains its evidence artifact for 7 days. Check the current Gemini account quota and data-use terms before running it. A successful smoke test proves only that this one request worked; it does not establish durable free capacity or production reliability.
+Check current account quota and data-use terms before making external requests.
+
+## Security and scope
+
+- Never commit API keys, tokens, passwords, or personal credentials.
+- Do not expose the local model gateway or dashboard to the LAN or public internet.
+- External calls are one-request-per-run with no automatic retry.
+- GitHub Actions quality checks remain mock-only; they cannot reach your computer's localhost gateway.
+- No broker connection, live trading, or strategy backtesting is enabled in this foundation slice.
