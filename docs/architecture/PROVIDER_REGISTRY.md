@@ -113,3 +113,43 @@ A provider can be enabled for a QUANTFORGE experiment only after:
 ## 7. Current state
 
 **No provider credentials are configured by this document. No API call has been made through a provider. No smoke test has passed. FreeLLMAPI is not installed or running.** This is a research and governance baseline only.
+
+
+## 8. Desktop installation review — FreeLLMAPI v0.16.28 (Windows)
+
+**User-selected installer:** `FreeLLMAPI-Setup-0.16.28.exe`  
+**Official asset URL:** https://github.com/tashfeenahmed/freellmapi/releases/download/v0.16.28/FreeLLMAPI-Setup-0.16.28.exe  
+**Review date:** 2026-11-14  
+**Status:** User is installing locally; QUANTFORGE integration is NOT YET APPROVED.
+
+### What was verified from project documentation
+
+- The project's README explicitly directs Windows users to download the desktop `.exe` installer from GitHub Releases.
+- The desktop application is a local Electron app and includes the router and dashboard.
+- The documented desktop data directory on Windows is `%APPDATA%\\FreeLLMAPI\\`; it contains the SQLite database, configuration, and logs.
+- The project describes provider keys as encrypted at rest in SQLite and says the desktop app is intended for single-user, local use.
+- The desktop README says the router binds to loopback by default; do not enable LAN/public binding for QUANTFORGE.
+- The project itself states that it is for personal experimentation and learning, not a stable production inference substrate. Upstream provider terms still apply.
+
+### Security checks still required
+
+- The exact v0.16.28 Windows executable's Authenticode signature and publisher identity have NOT been independently verified here.
+- A trustworthy SHA-256 checksum for this exact Windows installer was NOT verified from the release page during this review. Do not compare it with a checksum from a mirror or a different release.
+- The repository's current `SECURITY.md` appears stale relative to the v0.16.x release numbering (it still labels 0.6.x as current). This is a documentation-maintenance concern, not proof of malware.
+- Before entering any provider credentials, scan the downloaded installer with Microsoft Defender and inspect Windows file Properties → Digital Signatures. If the file has no signature, an invalid signature, or an unexpected publisher, stop and report the exact Windows warning rather than bypassing it.
+- Keep the application local-only. Do not expose its dashboard/API to the LAN or internet.
+- Do not add valuable/proprietary QUANTFORGE source code or research prompts until the data handling and upstream provider policies are reviewed.
+
+### First-run configuration gate
+
+1. Install only if Windows security checks are satisfactory.
+2. Launch the desktop app and confirm the dashboard opens locally.
+3. Do not add provider keys yet.
+4. Confirm the displayed local API base URL and model catalog version.
+5. Confirm the listener is bound to loopback (127.0.0.1), not 0.0.0.0.
+6. Record the installed version, local port, and observed security status.
+7. Only then run a harmless test prompt with one provider key and verify which upstream provider/model served it.
+
+### Architecture decision
+
+FreeLLMAPI remains an optional local gateway candidate. QUANTFORGE will retain a direct-provider adapter path and will not depend exclusively on FreeLLMAPI. The advertised aggregate token capacity is not a guaranteed entitlement and must not be entered into a QUANTFORGE capacity forecast as committed monthly usage.
