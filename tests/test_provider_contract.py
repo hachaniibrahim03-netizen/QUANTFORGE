@@ -2,14 +2,19 @@ import json
 import unittest
 from unittest.mock import patch
 
-from quantforge.providers import GeminiProvider, MockProvider, ProviderError
+from quantforge.providers import (
+    FreeLLMAPIProvider,
+    GeminiProvider,
+    MockProvider,
+    ProviderError,
+)
 from quantforge.task_runner import run_smoke
 
 
 class FakeResponse:
     def __init__(self, payload):
         self.payload = payload
-        self.headers = {"x-request-id": "fake-gemini-request"}
+        self.headers = {"x-request-id": "fake-provider-request"}
 
     def __enter__(self):
         return self
@@ -58,7 +63,39 @@ class ProviderContractTests(unittest.TestCase):
         self.assertEqual(response.output_text, "adapter works")
         self.assertEqual(response.input_tokens, 12)
         self.assertEqual(response.output_tokens, 4)
-        self.assertEqual(response.request_id, "fake-gemini-request")
+        self.assertEqual(response.request_id, "fake-provider-request")
+
+    def test_freellmapi_adapter_normalizes_local_gateway_response(self):
+        payload = {
+            "id": "gateway-test",
+            "choices": [{"message": {"content": "local gateway works"}}],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 3},
+        }
+        with patch("quantforge.providers.freellmapi.urllib.request.urlopen", return_value=FakeResponse(payload)):
+            provider = FreeLLMAPIProvider(
+                api_key="test-key",
+                model_name="exact-model-id",
+            )
+            response = provider.generate("hello")
+        self.assertEqual(provider.endpoint, "http://127.0.0.1:31415/v1/chat/completions")
+        self.assertEqual(response.provider, "freellmapi")
+        self.assertEqual(response.model, "exact-model-id")
+        self.assertEqual(response.output_text, "local gateway works")
+        self.assertEqual(response.input_tokens, 9)
+        self.assertEqual(response.output_tokens, 3)
+
+    def test_freellmapi_rejects_non_loopback_hosts(self):
+        with self.assertRaises(ProviderError):
+            FreeLLMAPIProvider(
+                api_key="test-key",
+                model_name="exact-model-id",
+                base_url="http://0.0.0.0:31415/v1",
+            )
+
+    def test_freellmapi_requires_explicit_model_id(self):
+        with patch.dict("os.environ", {}, clear=True):
+            with self.assertRaises(ProviderError):
+                FreeLLMAPIProvider(api_key="test-key")
 
 
 if __name__ == "__main__":
