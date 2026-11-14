@@ -39,6 +39,7 @@ class ProviderContractTests(unittest.TestCase):
         self.assertEqual(result["execution_mode"], "mock_only_no_external_api_call")
         self.assertEqual(len(result["prompt_sha256"]), 64)
         self.assertIn("timestamp_utc", result)
+        self.assertGreaterEqual(result["latency_ms"], 0)
 
     def test_gemini_requires_key_without_network_access(self):
         with patch.dict("os.environ", {}, clear=True):
