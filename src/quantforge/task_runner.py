@@ -8,18 +8,26 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from quantforge.providers import MockProvider
+from quantforge.providers import GeminiProvider, MockProvider, ProviderError
 
 MAX_PROMPT_CHARS = 8_000
 
 
-def run_smoke(prompt: str) -> dict:
+def run_smoke(prompt: str, provider_name: str = "mock") -> dict:
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
     if len(prompt) > MAX_PROMPT_CHARS:
         raise ValueError(f"prompt exceeds {MAX_PROMPT_CHARS} characters")
 
-    provider = MockProvider()
+    if provider_name == "mock":
+        provider = MockProvider()
+        execution_mode = "mock_only_no_external_api_call"
+    elif provider_name == "gemini":
+        provider = GeminiProvider()
+        execution_mode = "external_api_call"
+    else:
+        raise ValueError(f"unsupported provider: {provider_name}")
+
     response = provider.generate(prompt)
     payload = {
         "schema_version": "1.0",
@@ -33,7 +41,7 @@ def run_smoke(prompt: str) -> dict:
         "output_tokens": response.output_tokens,
         "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
         "output_text": response.output_text,
-        "execution_mode": "mock_only_no_external_api_call",
+        "execution_mode": execution_mode,
     }
     return payload
 
@@ -41,10 +49,11 @@ def run_smoke(prompt: str) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run QUANTFORGE provider contract smoke test")
     parser.add_argument("--prompt", default="QUANTFORGE provider contract check")
+    parser.add_argument("--provider", choices=("mock", "gemini"), default="mock")
     parser.add_argument("--output", default="artifacts/provider-smoke.json")
     args = parser.parse_args(argv)
     try:
-        result = run_smoke(args.prompt)
+        result = run_smoke(args.prompt, args.provider)
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
