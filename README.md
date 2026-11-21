@@ -6,6 +6,17 @@ An auditable, cost-aware multi-agent quantitative research and engineering labor
 
 The foundation now includes offline mock testing, a Gemini adapter scaffold, and a loopback-only FreeLLMAPI adapter. **No live QUANTFORGE-to-FreeLLMAPI request has yet been verified.** No API credentials are stored in this repository. No live trading or market-data execution is enabled.
 
+## Project continuity (read before contributing)
+
+- [Current project state](docs/project/PROJECT_STATE.md)
+- [Roadmap](docs/project/ROADMAP.md)
+- [Decision log](docs/project/DECISION_LOG.md)
+- [Agent handoff](docs/project/AGENT_HANDOFF.md)
+- [Permanent recordkeeping and backup policy](docs/governance/RECORDKEEPING_POLICY.md)
+- [Data Integrity MVP 001](docs/data/DATA_INTEGRITY_MVP_001.md)
+
+All agents must read the project state, roadmap, decision log, and relevant handoff/specification before work. Material decisions, code changes, tests, and experiment outcomes must be recorded in the repository. Never commit secrets or restricted market data.
+
 ## Start here
 
 - [Foundation blueprint](docs/architecture/FOUNDATION_BLUEPRINT.md)
